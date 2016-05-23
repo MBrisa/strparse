@@ -21,24 +21,40 @@ public abstract class Analyser {
 	public Analyser() {
 		bs = new BuilderStack();
 		bs.push(globalBuilder);
-		currentState = initState();
+		setCurrentState(initState());
 	}
 	
 	public void analyse(char c){
-		CharAction ca = this.currentState.action(c);
+		StateAction cr = this.getCurrentState().action(c);
+		State state = cr.resolveNextState();
+		if(state != null){
+			state.setBuilderStack(this.bs);
+			this.setCurrentState(state);
+		}
+		CharAction ca = cr.resolveCharAction();
 		ca.action(this.getBuilderStack(),c);
 	}
 	
+	/**
+	 * @return the currentState
+	 */
+	public State getCurrentState() {
+		return currentState;
+	}
+
+	/**
+	 * @param currentState the currentState to set
+	 */
+	public void setCurrentState(State currentState) {
+		this.currentState = currentState;
+	}
+
 	public Object complete(){
 		DataBuilder builder = bs.pop();
 		if(!bs.isEmpty() || builder != globalBuilder){
 			throw new InvalidStringException();
 		}
 		return builder.complete();
-	}
-	
-	public void setState(State state){
-		this.currentState = state;
 	}
 	
 	/**

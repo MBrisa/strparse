@@ -8,7 +8,7 @@ public class JsonAnalyser extends Analyser {
 
 	@Override
 	protected State initState() {
-		return new InitState(this);
+		return new InitState();
 	}
 
 }

@@ -1,7 +1,7 @@
 package org.mbrisa.strparse.jsonparser.state;
 
-import org.mbrisa.strparse.Analyser;
 import org.mbrisa.strparse.CharAction;
+import org.mbrisa.strparse.StateAction;
 import org.mbrisa.strparse.State;
 import org.mbrisa.strparse.common.ca.BuilderCreationAction;
 import org.mbrisa.strparse.common.ca.DataCollectionAction;
@@ -15,21 +15,91 @@ import org.mbrisa.strparse.jsonparser.ca.MapCreation;
 
 public class ListElementBeginState extends IgnoreWhitespaceState {
 
-	private final CharResolverSet resolvers;
+	private static final StateAction[] saa = new StateAction[Character.MAX_VALUE+1];
+	static{
+		StateAction dsa = new StateAction(){
+			@Override
+			public CharAction resolveCharAction() {
+				return (bs,cc) ->{
+					JavaLiteralValueCreation.getInstance().action(bs,cc);
+					DataCollectionAction.getInstance().action(bs,cc);
+				};
+			}
+			@Override
+			public State resolveNextState() {
+				return new BareListElementState();
+			}
+		};
+		for(int i = 0;i<saa.length;i++){
+			saa[i] = dsa;
+		}
+		saa['"'] = charResolverOnString(true);
+		saa['\''] =  charResolverOnString(false);
+		saa['{'] = new StateAction() {
+			@Override
+			public State resolveNextState() {
+				return new MapKeyBeginState();
+			}
+			@Override
+			public CharAction resolveCharAction() {
+				return MapCreation.getInstance();
+			}
+		};
+		saa['['] = State.keepState(ListCreation.getInstance());// list as element
+		saa[']'] = new StateAction() {
+			@Override
+			public State resolveNextState() {
+				return new ListOverState();
+			}
+			@Override
+			public CharAction resolveCharAction() {
+				return DoCompleteAction.getInstance();
+			}
+		};//empty list
+		saa['-'] = saa['+'] = saa['0'] = saa['1'] = saa['2'] = saa['3'] = saa['4'] = saa['5'] = saa['6'] = saa['7'] = saa['8'] = saa['9'] = new StateAction(){
+			@Override
+			public CharAction resolveCharAction() {
+				return (bs,cc) ->{
+					NumberBuilderCreation.getInstance().action(bs,cc);
+					DataCollectionAction.getInstance().action(bs,cc);
+				};
+			}
+			@Override
+			public State resolveNextState() {
+				return new BareListElementState();
+			}
+		};
+	}
 	
-	public ListElementBeginState(Analyser analyser) {
-		super(analyser);
-		this.resolvers = c -> {
+	public ListElementBeginState() {
+		super();
+	}
+	
+	private static StateAction charResolverOnString(boolean isDoubleQuote){
+		return new StateAction(){
+			@Override
+			public CharAction resolveCharAction() {
+				return StringBuilderCreation.getInstance();
+			}
+			@Override
+			public State resolveNextState() {
+				return StringOnListElementState.getInstance(isDoubleQuote);
+			}
+		};
+	}
+	
+	@Override
+	public StateAction actionWithoutWhitespace(char c) {
 			switch(c){
 			case '"' : 
 				return charResolverOnString(true);
 			case '\'' : 
 				return charResolverOnString(false);
 			case '{' :  
-				return new CharResolver() {
+				return new StateAction() {
 					@Override
 					public State resolveNextState() {
-						return new MapKeyBeginState(ListElementBeginState.this.getAnalyser());
+						return new MapKeyBeginState();
 					}
 					@Override
 					public CharAction resolveCharAction() {
@@ -38,21 +108,11 @@ public class ListElementBeginState extends IgnoreWhitespaceState {
 				};
 			case '[' : // list as element
 				return State.keepState(ListCreation.getInstance());
-//				new CharResolver() {
-//					@Override
-//					public State resolveNextState() {
-//						return ;
-//					}
-//					@Override
-//					public CharAction resolveCharAction() {
-//						return ListCreation.getInstance();
-//					}
-//				};
 			case ']' : //empty list
-				return new CharResolver() {
+				return new StateAction() {
 					@Override
 					public State resolveNextState() {
-						return new ListOverState(ListElementBeginState.this.getAnalyser());
+						return new ListOverState();
 					}
 					@Override
 					public CharAction resolveCharAction() {
@@ -66,7 +126,7 @@ public class ListElementBeginState extends IgnoreWhitespaceState {
 				}else{
 					bca = JavaLiteralValueCreation.getInstance();
 				}
-				return new CharResolver(){
+				return new StateAction(){
 					@Override
 					public CharAction resolveCharAction() {
 						return (bs,cc) ->{
@@ -76,28 +136,9 @@ public class ListElementBeginState extends IgnoreWhitespaceState {
 					}
 					@Override
 					public State resolveNextState() {
-						return new BareListElementState(ListElementBeginState.this.getAnalyser());
+						return new BareListElementState();
 					}
 				};
 			}
-		};
-	}
-	
-	private CharResolver charResolverOnString(boolean isDoubleQuote){
-		return new CharResolver(){
-			@Override
-			public CharAction resolveCharAction() {
-				return StringBuilderCreation.getInstance();
-			}
-			@Override
-			public State resolveNextState() {
-				return new StringOnListElementState(ListElementBeginState.this.getAnalyser(),isDoubleQuote);
-			}
-		};
-	}
-	
-	@Override
-	public CharResolverSet resolvers() {
-		return resolvers;
 	}
 }

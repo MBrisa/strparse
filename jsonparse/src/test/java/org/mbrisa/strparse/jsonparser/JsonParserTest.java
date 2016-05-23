@@ -17,6 +17,56 @@ import com.alibaba.fastjson.JSONObject;
 
 public class JsonParserTest {
 	
+	public static void main(String[] args) {
+		
+	/*case '"' : 
+		return charResolverOnString(true);
+	case '\'' : 
+		return charResolverOnString(false);
+	case '{' :  
+		return new StateAction() {
+			@Override
+			public State resolveNextState() {
+				return new MapKeyBeginState();
+			}
+			@Override
+			public CharAction resolveCharAction() {
+				return MapCreation.getInstance();
+			}
+		};
+	case '[' : // list as element
+		return State.keepState(ListCreation.getInstance());
+	case ']' : //empty list
+		return new StateAction() {
+			@Override
+			public State resolveNextState() {
+				return new ListOverState();
+			}
+			@Override
+			public CharAction resolveCharAction() {
+				return DoCompleteAction.getInstance();
+			}
+		};
+	default :
+		BuilderCreationAction bca;
+		if(c == '-' || c == '+' || (c >= '0' && c <= '9')){*/
+		
+		
+		char[] ca = {'\'','"','\\','[',']','{','}',':',',','-','+','0','9'};
+		for(char c : ca){
+			System.out.println(c+" > "+(int)c);
+		}
+		
+//		String s; 
+//		StrParser parser;
+//		Map<?,?> result;
+//		s = "{name:'hello'}";
+//		parser = new StrParser(s, new JsonAnalyser());
+//		result = (Map<?,?>)parser.parse();
+//		assertEquals(1,result.size());
+//		assertEquals("hello",result.get("name"));
+	}
+	
 	@Test
 	public void mapStringOnly(){
 		String s; 
@@ -89,6 +139,7 @@ public class JsonParserTest {
 		assertEquals("good",mother.get("name"));
 		assertEquals("49",mother.get("age"));
 		
+		
 		s = "{\"person\" : {\"country\" : {\"name\":\"china\"} }}";
 		Map<?,?> person;
 		Map<?,?> country;
@@ -156,6 +207,12 @@ public class JsonParserTest {
 		result = (Map<?,?>)parser.parse();
 		assertEquals(1,result.size());
 		assertEquals("hello",result.get("name"));
+		
+		s = "{ name : 'hel\"lo' }";
+		parser = new StrParser(s, new JsonAnalyser());
+		result = (Map<?,?>)parser.parse();
+		assertEquals(1,result.size());
+		assertEquals("hel\"lo",result.get("name"));
 	}
 	
 	@Test
